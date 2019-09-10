@@ -1,0 +1,10 @@
+[
+  {
+    "ParameterKey": "DomainName",
+    "ParameterValue": "certificate-validator.com"
+  },
+  {
+    "ParameterKey": "ServiceToken",
+    "ParameterValue": "arn:aws:lambda:<region>:<account-id>:function:<function-name>"
+  }
+]

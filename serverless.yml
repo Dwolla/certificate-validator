@@ -1,0 +1,25 @@
+service: certificate-validator
+org: dwolla
+
+provider:
+  name: aws
+  runtime: python3.7
+  stage: ${opt:stage, 'dev'} # The stage of the service. Default: dev
+  region: us-east-1
+  timeout: 60 # The amount of time that Lambda allows a function to run before stopping it.
+  iamRoleStatements:
+  - Effect: Allow
+    Action:
+      - acm:RequestCertificate
+      - acm:DeleteCertificate
+      - acm:DescribeCertificate
+      - route53:ChangeResourceRecordSets
+      - route53:ListHostedZonesByName
+    Resource: "*"
+
+package:
+  artifact: certificate-validator.zip
+
+functions:
+  main:
+    handler: certificate_validator/main.handler
