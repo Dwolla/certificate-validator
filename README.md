@@ -2,6 +2,7 @@
 
 [![Travis CI](https://travis-ci.org/Dwolla/certificate-validator.svg?branch=master)](https://travis-ci.org/Dwolla/certificate-validator)
 [![Codecov](https://img.shields.io/codecov/c/github/Dwolla/certificate-validator)](https://codecov.io/gh/Dwolla/certificate-validator)
+[![Releases](https://img.shields.io/github/v/release/Dwolla/certificate-validator?color=blue)](https://github.com/Dwolla/certificate-validator/releases)
 [![MIT License](https://img.shields.io/github/license/Dwolla/certificate-validator?color=blue)](https://github.com/Dwolla/certificate-validator/blob/master/LICENSE)
 
 Certificate Validator is an AWS CloudFormation custom resource which facilitates certificate validation via DNS.
