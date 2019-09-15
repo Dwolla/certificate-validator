@@ -9,7 +9,7 @@ import botocore
 
 class ValidationMethod(str, Enum):
     """
-    ValidationMethod of a Request Certificate request.
+    ValidationMethod of a RequestCertificate request.
 
     The ValidationMethod is the method you want to use to validate that you own
     or control the domain associated with a public certificate. You can
