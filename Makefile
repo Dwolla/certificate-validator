@@ -1,4 +1,4 @@
-.PHONY: help clean deploy package test
+.PHONY: help clean deploy package test format
 .DEFAULT_GOAL := help
 
 PACKAGE_DIR := package

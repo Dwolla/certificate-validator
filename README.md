@@ -108,7 +108,7 @@ mkvirtualenv certificate-validator
 Install requirements:
 
 ```bash
-pip install -r requirements_dev.txt
+pip install -r certificate_validator/requirements_dev.txt
 ```
 
 ### Deployment
