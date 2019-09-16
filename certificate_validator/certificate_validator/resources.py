@@ -14,9 +14,9 @@ from certificate_validator.provider import Provider
 
 class Action(str, Enum):
     """
-    Action of a Change Resource Record Sets request.
+    Action of a ChangeResourceRecordSets request.
 
-    A Change Resource Record Sets request can have the following actions:
+    A ChangeResourceRecordSets request can have the following actions:
       * CREATE: Creates a resource record set that has the specified values.
       * DELETE: Deletes an existing resource record set that has the specified
         values.
@@ -103,7 +103,6 @@ class Certificate(CertificateMixin, Provider):
         :rtype: None
         :return: None
         """
-        self.delete()
         self.create()
 
     def delete(self) -> None:
@@ -135,10 +134,10 @@ class CertificateValidator(CertificateMixin, Provider):
     """
     A Custom::CertificateValidator Custom Resource.
 
-    The Custom::CertificateValidator resource creates, updates, and deletes a
-    AWS::Route53::RecordSetGroup resource.
+    The Custom::CertificateValidator resource creates, updates, and deletes
+    AWS::Route53::RecordSetGroup resources.
 
-    The Custom::CertificateValidator resource retrieves the record set used by
+    The Custom::CertificateValidator resource retrieves the record sets used by
     AWS Certificate Manager (ACM) to validate a certificate.
     """
     def __init__(self, *args, **kwargs):
@@ -152,118 +151,125 @@ class CertificateValidator(CertificateMixin, Provider):
         self.acm = ACM()
         self.route53 = Route53()
 
-    def create(self) -> None:
+    def change_resource_record_sets(
+        self, certificate_arn: str, action: Action
+    ) -> None:
         """
-        Create a AWS::Route53::RecordSetGroup resource.
+        Create, update, or delete AWS::Route53::RecordSetGroup resources.
+
+        Given the ARN of a ACM certificate, create, update, or delete the
+        AWS::Route53::RecordSetGroup resources used for initial validation.
+
+        :type certificate_arn: str
+        :param certificate_arn: ARN of the ACM certificate
+        :type action: Action
+        :param action: action of a ChangeResourceRecordSets request
 
         :rtype: None
         :return: None
         """
-        if not self.is_valid_arn(
-            self.request.resource_properties['CertificateArn']
-        ):
+        if not self.is_valid_arn(certificate_arn):
             self.response.set_status(success=False)
             self.response.set_reason(reason='Certificate ARN is invalid.')
             return
-        self.response.set_physical_resource_id(str(uuid.uuid4()))
         try:
-            response = self.acm.describe_certificate(
-                certificate_arn=self.request.
-                resource_properties['CertificateArn']
+            domain_validation_options = self.get_domain_validation_options(
+                certificate_arn
             )
-            domain_name = response['Certificate']['DomainName']
-            hosted_zone_id = self.get_hosted_zone_id(domain_name)
-            resource_records = self.get_resource_records(
-                self.request.resource_properties['CertificateArn']
-            )
-            change_batch = self.get_change_batch(
-                Action.CREATE.value, resource_records
-            )
-            self.route53.change_resource_record_sets(
-                hosted_zone_id=hosted_zone_id, change_batch=change_batch
-            )
+            for domain_validation_option in domain_validation_options:
+                # remove subdomains from DomainName
+                domain_name = '.'.join(
+                    domain_validation_option['DomainName'].split('.')[-2:]
+                )
+                hosted_zone_id = self.get_hosted_zone_id(domain_name)
+                resource_record = domain_validation_option['ResourceRecord']
+                change_batch = self.get_change_batch(
+                    action.value, resource_record
+                )
+                self.route53.change_resource_record_sets(
+                    hosted_zone_id=hosted_zone_id, change_batch=change_batch
+                )
             self.response.set_status(success=True)
         except exceptions.ClientError as ex:
             self.response.set_status(success=False)
             self.response.set_reason(reason=str(ex))
+
+    def create(self) -> None:
+        """
+        Create AWS::Route53::RecordSetGroup resources.
+
+        :rtype: None
+        :return: None
+        """
+        self.response.set_physical_resource_id(str(uuid.uuid4()))
+        self.change_resource_record_sets(
+            self.request.resource_properties['CertificateArn'], Action.UPSERT
+        )
 
     def update(self) -> None:
         """
-        Update the AWS::Route53::RecordSetGroup resource.
+        Update AWS::Route53::RecordSetGroup resources.
+
+        If either the DomainName or SubjectAlternativeNames for the
+        Custom::Certificate are changed, delete the
+        AWS::Route53::RecordSetGroup resources associated with the old
+        Custom::Certificate and create the AWS::Route53::RecordSetGroup
+        resources associated with the new Custom::Certificate.
 
         :rtype: None
         :return: None
         """
-        self.delete()
-        self.create()
+        self.change_resource_record_sets(
+            self.request.old_resource_properties['CertificateArn'],
+            Action.DELETE
+        )
+        self.change_resource_record_sets(
+            self.request.resource_properties['CertificateArn'], Action.UPSERT
+        )
 
     def delete(self) -> None:
         """
-        Delete the AWS::Route53::RecordSetGroup resource.
+        Delete AWS::Route53::RecordSetGroup resources.
 
         :rtype: None
         :return: None
         """
-        if not self.is_valid_arn(
-            self.request.resource_properties['CertificateArn']
-        ):
-            self.response.set_status(success=False)
-            self.response.set_reason(reason='Certificate ARN is invalid.')
-            return
-        try:
-            response = self.acm.describe_certificate(
-                certificate_arn=self.request.
-                resource_properties['CertificateArn']
-            )
-            domain_name = response['Certificate']['DomainName']
-            hosted_zone_id = self.get_hosted_zone_id(domain_name)
-            resource_records = self.get_resource_records(
-                self.request.resource_properties['CertificateArn']
-            )
-            change_batch = self.get_change_batch(
-                Action.DELETE.value, resource_records
-            )
-            self.route53.change_resource_record_sets(
-                hosted_zone_id=hosted_zone_id, change_batch=change_batch
-            )
-            self.response.set_status(success=True)
-        except exceptions.ClientError as ex:
-            self.response.set_status(success=False)
-            self.response.set_reason(reason=str(ex))
+        self.change_resource_record_sets(
+            self.request.resource_properties['CertificateArn'], Action.DELETE
+        )
 
-    def get_resource_records(self, certificate_arn: str) -> list:
+    def get_domain_validation_options(self, certificate_arn: str) -> str:
         """
-        Retrieve the resouce records for a given Certificate.
+        Retrieve the domain validation options for a given Certificate.
+
+        Polling of the DescribeCertificate API endpoint is used since there is
+        a latency period between when the certificate is created and when the
+        resource records used for domain validation are available.
 
         :type certificate_arn: str
         :param certificate_arn: ARN of the ACM certificate
 
         :rtype: list
-        :return: list of resource records
+        :return: domain validation options for a given Certificate
         """
         def resource_records_exist(response: dict) -> bool:
-            if response['Certificate']['DomainValidationOptions'][0].get(
-                'ResourceRecord'
-            ):
-                return True
+            domain_validation_options = response['Certificate'
+                                                 ]['DomainValidationOptions']
+            for domain_validation_option in domain_validation_options:
+                if not domain_validation_option.get('ResourceRecord'):
+                    return False
             else:
-                return False
+                return True
 
         response = polling.poll(
-            lambda: self.acm.describe_certificate(
-                certificate_arn=self.request.resource_properties[
-                    'CertificateArn']
-            ),
+            lambda: self.acm.
+            describe_certificate(certificate_arn=certificate_arn),
             check_success=resource_records_exist,
             step=5,
             timeout=60
         )
 
-        resource_records = [
-            x['ResourceRecord']
-            for x in response['Certificate']['DomainValidationOptions']
-        ]
-        return resource_records
+        return response['Certificate']['DomainValidationOptions']
 
     def get_hosted_zone_id(self, domain_name: str) -> str:
         """
@@ -279,40 +285,38 @@ class CertificateValidator(CertificateMixin, Provider):
         hosted_zone = response['HostedZones'][0]
         return hosted_zone['Id'].split('/hostedzone/')[1]
 
-    def get_change_batch(self, action: Action, resource_records: list) -> dict:
+    def get_change_batch(self, action: Action, resource_record: dict) -> dict:
         """
         Create a change batch given a resource record set.
 
-        The `resource_records` parameter has the following form:
+        The `resource_record` parameter has the following form:
 
-        [
+        {
           'Name': 'string',
           'Type': 'CNAME',
           'Value': 'string'
-        ]
+        }
 
         :type action: Action
-        :param action: action of a Change Resource Record Sets request
-        :type resource_records: list
-        :param resource_records: resource record sets to add for domain
-          validation
+        :param action: action of a ChangeResourceRecordSets request
+        :type resource_record: dict
+        :param resource_record: resource record set for domain validation
 
         :rtype: dict
-        :return: a dict containing the resource record sets to add for domain
+        :return: a dict containing the resource record set for domain
           validation
         """
         changes = []
-        for resource_record in resource_records:
-            changes.append({
-                'Action': action,
-                'ResourceRecordSet': {
-                    'Name': resource_record['Name'],
-                    'Type': resource_record['Type'],
-                    'TTL': 300,
-                    'ResourceRecords': [{
-                        'Value': resource_record['Value']
-                    }]
-                }
-            })
+        changes.append({
+            'Action': action,
+            'ResourceRecordSet': {
+                'Name': resource_record['Name'],
+                'Type': resource_record['Type'],
+                'TTL': 300,
+                'ResourceRecords': [{
+                    'Value': resource_record['Value']
+                }]
+            }
+        })
         change_batch = {'Changes': changes}
         return change_batch

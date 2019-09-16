@@ -5,13 +5,19 @@
 [![Releases](https://img.shields.io/github/v/release/Dwolla/certificate-validator?color=blue)](https://github.com/Dwolla/certificate-validator/releases)
 [![MIT License](https://img.shields.io/github/license/Dwolla/certificate-validator?color=blue)](https://github.com/Dwolla/certificate-validator/blob/master/LICENSE)
 
-Certificate Validator is an AWS CloudFormation custom resource which facilitates certificate validation via DNS.
+Certificate Validator is an AWS CloudFormation custom resource which facilitates AWS Certificate Manager (ACM) certificate validation via DNS.
 
 ## Overview
 
 Certificate Validator solves a common problem:
 
-> *AWS CloudFormation does not provide a means for automatically validating certificates.*
+>*AWS CloudFormation does not provide a means for automatically validating AWS Certificate Manager (ACM) certificates.*
+
+From the [`AWS::CertificateManager::Certificate`](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-certificatemanager-certificate.html) documentation:
+
+>**Important**
+>
+>When you use the `AWS::CertificateManager::Certificate` resource in an AWS CloudFormation stack, the stack will remain in the `CREATE_IN_PROGRESS` state. Further stack operations will be delayed until you validate the certificate request, either by acting upon the instructions in the validation email, or by adding a CNAME record to your DNS configuration.
 
 ## Validating a certificate with DNS
 

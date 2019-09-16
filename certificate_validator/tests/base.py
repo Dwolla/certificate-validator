@@ -197,13 +197,15 @@ class CertificateValidatorBaseTestCase(AWSBaseTestCase, ProviderBaseTestCase):
             'PhysicalResourceId': 'physical_resource_id',
             'ResourceProperties': {
                 'ServiceToken': 'service_token',
-                'CertificateArn': 'arn:aws:acm:us-east-1:123:certificate/1337',
+                'CertificateArn': 'arn:aws:acm:us-east-1:123:certificate/1',
             },
             'OldResourceProperties': {
-                'ServiceToken': 'service_token'
+                'ServiceToken': 'service_token',
+                'CertificateArn': 'arn:aws:acm:us-east-1:123:certificate/0',
             }
         }
         self.request = Request(**self.request_kwargs)
+        self.certificate_arn = 'arn:aws:acm:us-east-1:123:certificate/1337'
         self.mock_request = patch.object(provider, 'Request').start()
         self.mock_request.return_value = Mock()
         self.mock_response = patch.object(provider, 'Response').start()
@@ -228,18 +230,21 @@ class CertificateValidatorBaseTestCase(AWSBaseTestCase, ProviderBaseTestCase):
         self.mock_change_resource_record_sets = patch.object(
             resources.Route53, 'change_resource_record_sets'
         ).start()
+        self.mock_get_domain_validation_options = patch.object(
+            resources.CertificateValidator, 'get_domain_validation_options'
+        ).start()
+        self.mock_get_domain_validation_options.return_value = [{
+            'DomainName': 'certificate-validator.com',
+            'ResourceRecord': {
+                'Name': '_x1.certificate-validator.com.',
+                'Type': 'CNAME',
+                'Value': '_x2.acm-validations.aws.'
+            }
+        }]
         self.mock_get_hosted_zone_id = patch.object(
             resources.CertificateValidator, 'get_hosted_zone_id'
         ).start()
         self.mock_get_hosted_zone_id.return_value = 'Z23ABC4XYZL05B'
-        self.mock_get_resource_records = patch.object(
-            resources.CertificateValidator, 'get_resource_records'
-        ).start()
-        self.mock_get_resource_records.return_value = [{
-            'Name': '_x1.certificate-validator.com.',
-            'Type': 'CNAME',
-            'Value': '_x2.acm-validations.aws.'
-        }]
         self.mock_get_change_batch = patch.object(
             resources.CertificateValidator, 'get_change_batch'
         ).start()

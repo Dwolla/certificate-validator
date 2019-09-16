@@ -449,6 +449,18 @@ class Provider():
         within the template. Therefore, custom resource code doesn't have to
         detect changes because it knows that its properties have changed when
         Update is being called.
+
+        *Replacing a Custom Resource During an Update*
+
+        You can update custom resources that require a replacement of the
+        underlying physical resource. When you update a custom resource in an
+        AWS CloudFormation template, AWS CloudFormation sends an update request
+        to that custom resource. If a custom resource requires a replacement,
+        the new custom resource must send a response with the new physical ID.
+        When AWS CloudFormation receives the response, it compares the
+        PhysicalResourceId between the old and new custom resources. If they
+        are different, AWS CloudFormation recognizes the update as a
+        replacement and sends a delete request to the old resource.
         """
         raise NotImplementedError
 
