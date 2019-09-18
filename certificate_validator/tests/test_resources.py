@@ -304,6 +304,7 @@ class CertificateValidatorTestCase(CertificateValidatorBaseTestCase):
         self.mock_response.set_reason.assert_called_with(reason=reason)
 
     def test_create(self):
+        mock_wait = patch.object(resources.ACM, 'wait').start()
         mock_change_resource_record_sets = \
             patch.object(resources.CertificateValidator,
                          'change_resource_record_sets').start()
@@ -312,6 +313,9 @@ class CertificateValidatorTestCase(CertificateValidatorBaseTestCase):
         self.mock_response.set_physical_resource_id.assert_called_with('1337')
         mock_change_resource_record_sets.assert_called_with(
             'arn:aws:acm:us-east-1:123:certificate/1', Action.UPSERT
+        )
+        mock_wait.assert_called_once_with(
+            'arn:aws:acm:us-east-1:123:certificate/1'
         )
 
     def test_update(self):

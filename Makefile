@@ -26,6 +26,9 @@ clean: ## remove deployment and Python artifacts
 deploy: package ## deploy AWS Lambda function via Serverless
 	serverless deploy -v --stage ${STAGE}
 
+remove: ## remove AWS Lambda function via Serverless
+	serverless remove -v --stage ${STAGE}
+
 package: clean ## create AWS Lambda function deployment package
 	mkdir -p ${PACKAGE_DIR}
 	pip3 install -r certificate_validator/requirements.txt -t ${PACKAGE_DIR}

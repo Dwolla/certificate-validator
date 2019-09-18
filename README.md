@@ -19,6 +19,10 @@ From the [`AWS::CertificateManager::Certificate`](https://docs.aws.amazon.com/AW
 >
 >When you use the `AWS::CertificateManager::Certificate` resource in an AWS CloudFormation stack, the stack will remain in the `CREATE_IN_PROGRESS` state. Further stack operations will be delayed until you validate the certificate request, either by acting upon the instructions in the validation email, or by adding a CNAME record to your DNS configuration.
 
+## Getting Started
+
+Check out the [Getting Started](https://github.com/Dwolla/certificate-validator/blob/master/docs/getting-started.md) documentation to start using Certificate Validator.
+
 ## Validating a certificate with DNS
 
 When you use the `AWS::CertificateManager::Certificate` resource in an AWS CloudFormation stack, the stack will remain in the `CREATE_IN_PROGRESS` state and any further stack operations will be delayed until you validate the certificate request. Certificate validation can be completed either by acting upon the instructions in the certificate validation email or by adding a CNAME record to your DNS configuration.
@@ -111,12 +115,28 @@ Install requirements:
 pip install -r certificate_validator/requirements_dev.txt
 ```
 
-### Deployment
+## Deployment
 
 Deploy Certificate Validator:
 
 ```bash
-serverless deploy -v
+make deploy
 ```
 
-**Note**: An optional `--stage` flag can be used to specify the *stage*. Defaults to `dev`.
+**Note**: An optional `STAGE` variable can be used to specify the *stage*. Defaults to `dev`.
+
+**Example**
+
+```bash
+make deploy STAGE=prod
+```
+
+To remove Certificate Validator, run `make remove`.
+
+**Note**: An optional `STAGE` variable can be used to specify the *stage*. Defaults to `dev`.
+
+**Example**
+
+```bash
+make remove STAGE=prod
+```

@@ -1,5 +1,11 @@
 # History
 
+## v0.3.0 (2019-09-18)
+---
+
+* The CertificateValidator custom resource will now wait until the ACM
+Certificate is issued before returning a SUCCESS response.
+
 ## v0.2.0 (2019-09-16)
 ---
 
