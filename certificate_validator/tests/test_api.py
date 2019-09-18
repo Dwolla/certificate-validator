@@ -36,6 +36,7 @@ class ACMTestCase(AWSBaseTestCase):
         super(ACMTestCase, self).setUp()
         self.acm = ACM()
         self.acm.client = Mock()
+        self.acm.waiter = Mock()
 
     def test_request_certificate(self):
         expected = {'CertificateArn': 'string'}
@@ -85,6 +86,18 @@ class ACMTestCase(AWSBaseTestCase):
             CertificateArn=certificate_arn
         )
         self.assertEqual(expected, actual)
+
+    def test_wait(self):
+        certificate_arn = \
+            'arn:aws:acm:region:account-id:certificate/certificate-id'
+        self.acm.wait(certificate_arn)
+        self.acm.waiter.wait.assert_called_with(
+            CertificateArn=certificate_arn,
+            WaiterConfig={
+                'Delay': 5,
+                'MaxAttempts': 60
+            }
+        )
 
 
 class Route53TestCase(AWSBaseTestCase):

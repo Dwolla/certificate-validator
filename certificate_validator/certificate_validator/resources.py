@@ -198,6 +198,9 @@ class CertificateValidator(CertificateMixin, Provider):
         """
         Create AWS::Route53::RecordSetGroup resources.
 
+        Wait until the AWS::CertificateManager::Certificate resource is issued
+        before proceeding.
+
         :rtype: None
         :return: None
         """
@@ -205,6 +208,7 @@ class CertificateValidator(CertificateMixin, Provider):
         self.change_resource_record_sets(
             self.request.resource_properties['CertificateArn'], Action.UPSERT
         )
+        self.acm.wait(self.request.resource_properties['CertificateArn'])
 
     def update(self) -> None:
         """

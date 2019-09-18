@@ -81,6 +81,7 @@ class ACM(AWS):
         :return: None
         """
         super(ACM, self).__init__(*args, **kwargs)
+        self.waiter = self.client.get_waiter('certificate_validated')
 
     def request_certificate(
         self, domain_name: str, subject_alternative_names: list
@@ -131,6 +132,28 @@ class ACM(AWS):
         """
         return self.client.describe_certificate(
             CertificateArn=certificate_arn,
+        )
+
+    def wait(self, certificate_arn: str) -> None:
+        """
+        Wait for the specified ACM certificate to be issued.
+
+        Poll the DescribeCertificate API endpoint every 5 seconds until a
+        successful state is reached. An error is returned after 60 failed
+        checks (5 minutes).
+
+        :type certificate_arn: str
+        :param certificate_arn: ARN of the ACM certificate
+
+        :rtype: None
+        :return: None
+        """
+        return self.waiter.wait(
+            CertificateArn=certificate_arn,
+            WaiterConfig={
+                'Delay': 5,
+                'MaxAttempts': 60
+            }
         )
 
 
