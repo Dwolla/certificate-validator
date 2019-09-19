@@ -1,5 +1,10 @@
 # History
 
+## v0.4.0 (2019-09-19)
+---
+
+* A delete request will no longer fail if the specified resources do not exist.
+
 ## v0.3.0 (2019-09-18)
 ---
 
