@@ -83,7 +83,7 @@ check: ## check complexity and docstrings
 	echo 'Checking complexity...' && \
 	failed=0 && \
 	for f in $$(find $$(pwd)/certificate_validator/ -name '*.py';); do \
-		output=$$(python3 -m mccabe --min 7 "$$f") && \
+		output=$$(python3 -m mccabe --min 9 "$$f") && \
 		if [ $(strip "$$output") != "" ]; then \
 			echo "$(YELLOW)$$(basename $$f) is too complex.$(RESET)"; \
 			echo "$(YELLOW)$$output$(RESET)\n"; \

@@ -126,8 +126,12 @@ class Certificate(CertificateMixin, Provider):
             )
             self.response.set_status(success=True)
         except exceptions.ClientError as ex:
-            self.response.set_status(success=False)
-            self.response.set_reason(reason=str(ex))
+            if ex.response['Error']['Code'] == 'ResourceNotFoundException':
+                self.response.set_status(success=True)
+                self.response.set_reason(reason='Certificate not found.')
+            else:
+                self.response.set_status(success=False)
+                self.response.set_reason(reason=str(ex))
 
 
 class CertificateValidator(CertificateMixin, Provider):
@@ -191,8 +195,21 @@ class CertificateValidator(CertificateMixin, Provider):
                 )
             self.response.set_status(success=True)
         except exceptions.ClientError as ex:
-            self.response.set_status(success=False)
-            self.response.set_reason(reason=str(ex))
+            if ex.response['Error']['Code'] == 'ResourceNotFoundException':
+                self.response.set_status(success=True)
+                self.response.set_reason(reason='Certificate not found.')
+            elif ex.response['Error']['Code'] == 'InvalidChangeBatch':
+                if 'not found' in ex.response['Error']['Message']:
+                    self.response.set_status(success=True)
+                    self.response.set_reason(
+                        reason='Resource Record Set not found.'
+                    )
+                else:
+                    self.response.set_status(success=False)
+                    self.response.set_reason(reason=str(ex))
+            else:
+                self.response.set_status(success=False)
+                self.response.set_reason(reason=str(ex))
 
     def create(self) -> None:
         """

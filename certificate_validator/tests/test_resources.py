@@ -64,7 +64,7 @@ class CertificateTestCase(CertificateBaseTestCase):
         c = Certificate(self.request, self.mock_response)
         self.mock_request_certificate.side_effect = exceptions.ClientError(
             error_response={'Error': {
-                'Code': '1337',
+                'Code': 'Code',
                 'Message': 'Message'
             }},
             operation_name='Operation'
@@ -76,7 +76,7 @@ class CertificateTestCase(CertificateBaseTestCase):
         )
         self.mock_response.set_status.assert_called_with(success=False)
         reason = \
-            'An error occurred (1337) when calling the Operation operation: ' \
+            'An error occurred (Code) when calling the Operation operation: ' \
             'Message'
         self.mock_response.set_reason.assert_called_with(reason=reason)
 
@@ -93,6 +93,28 @@ class CertificateTestCase(CertificateBaseTestCase):
         self.mock_response.set_status.assert_called_with(success=True)
         self.mock_response.set_reason.assert_called_with(
             reason='Certificate does not exist.'
+        )
+
+    def test_delete_success_certificate_not_found(self):
+        self.mock_request.physical_resource_id = \
+            'arn:aws:acm:us-east-1:123:certificate/1337'
+        self.mock_delete_certificate.side_effect = exceptions.ClientError(
+            error_response={
+                'Error': {
+                    'Code': 'ResourceNotFoundException',
+                    'Message': 'Message'
+                }
+            },
+            operation_name='Operation'
+        )
+        c = Certificate(self.mock_request, self.mock_response)
+        c.delete()
+        self.mock_delete_certificate.assert_called_with(
+            certificate_arn='arn:aws:acm:us-east-1:123:certificate/1337'
+        )
+        self.mock_response.set_status.assert_called_with(success=True)
+        self.mock_response.set_reason.assert_called_with(
+            reason='Certificate not found.'
         )
 
     def test_delete_success(self):
@@ -120,7 +142,7 @@ class CertificateTestCase(CertificateBaseTestCase):
         c = Certificate(self.mock_request, self.mock_response)
         self.mock_delete_certificate.side_effect = exceptions.ClientError(
             error_response={'Error': {
-                'Code': '1337',
+                'Code': 'Code',
                 'Message': 'Message'
             }},
             operation_name='Operation'
@@ -131,7 +153,7 @@ class CertificateTestCase(CertificateBaseTestCase):
         )
         self.mock_response.set_status.assert_called_with(success=False)
         reason = \
-            'An error occurred (1337) when calling the Operation operation: ' \
+            'An error occurred (Code) when calling the Operation operation: ' \
             'Message'
         self.mock_response.set_reason.assert_called_with(reason=reason)
 
@@ -198,7 +220,7 @@ class CertificateValidatorTestCase(CertificateValidatorBaseTestCase):
         self.mock_get_domain_validation_options.side_effect = \
             exceptions.ClientError(
                 error_response={'Error': {
-                    'Code': '1337',
+                    'Code': 'Code',
                     'Message': 'Message'
                 }},
                 operation_name='Operation'
@@ -207,8 +229,28 @@ class CertificateValidatorTestCase(CertificateValidatorBaseTestCase):
         cv.change_resource_record_sets(self.certificate_arn, Action.CREATE)
         self.mock_response.set_status.assert_called_with(success=False)
         reason = \
-            'An error occurred (1337) when calling the Operation operation: ' \
+            'An error occurred (Code) when calling the Operation operation: ' \
             'Message'
+        self.mock_response.set_reason.assert_called_with(reason=reason)
+
+    def test_change_resource_record_sets_create_failed_invalid_cb(self):
+        self.mock_request.resource_properties = {
+            'CertificateArn': self.certificate_arn
+        }
+        self.mock_get_domain_validation_options.side_effect = \
+            exceptions.ClientError(
+                error_response={'Error': {
+                    'Code': 'InvalidChangeBatch',
+                    'Message': 'Message'
+                }},
+                operation_name='Operation'
+            )
+        cv = CertificateValidator(self.mock_request, self.mock_response)
+        cv.change_resource_record_sets(self.certificate_arn, Action.DELETE)
+        self.mock_response.set_status.assert_called_with(success=False)
+        reason = \
+            'An error occurred (InvalidChangeBatch) when calling the ' \
+            'Operation operation: Message'
         self.mock_response.set_reason.assert_called_with(reason=reason)
 
     def test_change_resource_record_sets_upsert(self):
@@ -290,7 +332,7 @@ class CertificateValidatorTestCase(CertificateValidatorBaseTestCase):
         self.mock_get_domain_validation_options.side_effect = \
             exceptions.ClientError(
                 error_response={'Error': {
-                    'Code': '1337',
+                    'Code': 'Code',
                     'Message': 'Message'
                 }},
                 operation_name='Operation'
@@ -299,9 +341,51 @@ class CertificateValidatorTestCase(CertificateValidatorBaseTestCase):
         cv.change_resource_record_sets(self.certificate_arn, Action.DELETE)
         self.mock_response.set_status.assert_called_with(success=False)
         reason = \
-            'An error occurred (1337) when calling the Operation operation: ' \
+            'An error occurred (Code) when calling the Operation operation: ' \
             'Message'
         self.mock_response.set_reason.assert_called_with(reason=reason)
+
+    def test_change_resource_record_sets_delete_failed_cert_not_found(self):
+        self.mock_request.resource_properties = {
+            'CertificateArn': self.certificate_arn
+        }
+        self.mock_get_domain_validation_options.side_effect = \
+            exceptions.ClientError(
+                error_response={'Error': {
+                    'Code': 'ResourceNotFoundException',
+                    'Message': 'Message'
+                }},
+                operation_name='Operation'
+            )
+        cv = CertificateValidator(self.mock_request, self.mock_response)
+        cv.change_resource_record_sets(self.certificate_arn, Action.DELETE)
+        self.mock_response.set_status.assert_called_with(success=True)
+        self.mock_response.set_reason.assert_called_with(
+            reason='Certificate not found.'
+        )
+
+    def test_change_resource_record_sets_delete_failed_rrset_not_found(self):
+        self.mock_request.resource_properties = {
+            'CertificateArn': self.certificate_arn
+        }
+        message = \
+            'Tried to delete resource record set ' \
+            '[name=\'_x1.certificate-validator.com.\', type=\'CNAME\'] but ' \
+            'it was not found'
+        self.mock_get_domain_validation_options.side_effect = \
+            exceptions.ClientError(
+                error_response={'Error': {
+                    'Code': 'InvalidChangeBatch',
+                    'Message': message
+                }},
+                operation_name='Operation'
+            )
+        cv = CertificateValidator(self.mock_request, self.mock_response)
+        cv.change_resource_record_sets(self.certificate_arn, Action.DELETE)
+        self.mock_response.set_status.assert_called_with(success=True)
+        self.mock_response.set_reason.assert_called_with(
+            reason='Resource Record Set not found.'
+        )
 
     def test_create(self):
         mock_wait = patch.object(resources.ACM, 'wait').start()
