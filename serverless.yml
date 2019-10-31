@@ -6,7 +6,7 @@ provider:
   runtime: python3.7
   stage: ${opt:stage, 'dev'} # The stage of the service. Default: dev
   region: us-east-1
-  timeout: 60 # The amount of time that Lambda allows a function to run before stopping it.
+  timeout: 900 # The amount of time that Lambda allows a function to run before stopping it.
   iamRoleStatements:
   - Effect: Allow
     Action:

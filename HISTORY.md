@@ -1,5 +1,11 @@
 # History
 
+## v0.4.1 (2019-09-19)
+---
+
+* The timeout for the Certificate Validator Lambda function is now 900 seconds
+(15 minutes).
+
 ## v0.4.0 (2019-09-19)
 ---
 
