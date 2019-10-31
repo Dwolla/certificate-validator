@@ -140,3 +140,10 @@ To remove Certificate Validator, run `make remove`.
 ```bash
 make remove STAGE=prod
 ```
+
+Use [bumpversion](https://pypi.org/project/bumpversion/) to increment the current version:
+
+```bash
+cd certificate_validator
+bumpversion <major | minor | patch>
+```
