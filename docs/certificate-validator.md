@@ -21,6 +21,16 @@ Properties:
 
 ## Properties
 
+### `LogLevel`
+
+Log Level for Lambda Function output
+
+One of: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+*Default*: INFO
+*Required*: No
+*Type*: String
+
 ### `ServiceToken`
 
 >**Note**

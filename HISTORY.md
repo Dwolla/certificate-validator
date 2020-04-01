@@ -1,5 +1,12 @@
 # History
 
+## v???
+
+* Deploy certificate to same region as CloudFormation stack
+* Allow Setting Log Level from CloudFormation Stack
+* Do not fail if SubjectAlternativeNames is an empty list. Support empty items
+  in SubjectAlternativeNames list.
+
 ## v0.4.1 (2019-09-19)
 ---
 
