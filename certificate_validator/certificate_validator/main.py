@@ -3,11 +3,9 @@
 
 import logging
 
+from certificate_validator.logger import logger
 from certificate_validator.provider import Request, Response
 from certificate_validator.resources import Certificate, CertificateValidator
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
 
 
 def handler(event: dict, context: object) -> dict:
