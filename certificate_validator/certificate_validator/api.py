@@ -102,11 +102,13 @@ class ACM(AWS):
         :rtype: dict
         :return: ARN of the issued certificate
         """
-        return self.client.request_certificate(
+        kwargs = dict(
             DomainName=domain_name,
-            SubjectAlternativeNames=subject_alternative_names,
             ValidationMethod=ValidationMethod.DNS.value
         )
+        if subject_alternative_names:
+            kwargs['SubjectAlternativeNames'] = subject_alternative_names
+        return self.client.request_certificate(**kwargs)
 
     def delete_certificate(self, certificate_arn: str) -> None:
         """

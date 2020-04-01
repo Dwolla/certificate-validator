@@ -9,6 +9,7 @@ import polling
 from botocore import exceptions
 
 from certificate_validator.api import ACM, Route53
+from certificate_validator.logger import logger
 from certificate_validator.provider import Provider
 
 
@@ -70,7 +71,7 @@ class Certificate(CertificateMixin, Provider):
         :return: None
         """
         super(Certificate, self).__init__(*args, **kwargs)
-        self.acm = ACM()
+        self.acm = ACM(self.request.region)
 
     def create(self) -> None:
         """
@@ -80,10 +81,15 @@ class Certificate(CertificateMixin, Provider):
         :return: None
         """
         try:
+            properties = self.request.resource_properties
+            sans = properties.sans
+            logger.info(
+                "Creating certificate request for:  %s (%s)",
+                properties.domain_name, ", ".join(properties.sans)
+            )
             response = self.acm.request_certificate(
-                domain_name=self.request.resource_properties['DomainName'],
-                subject_alternative_names=self.request.
-                resource_properties['SubjectAlternativeNames']
+                domain_name=properties.domain_name,
+                subject_alternative_names=sans
             )
             self.response.set_status(success=True)
             # canonically, the ARN (Amazon Resource Name) of the Certificate
@@ -152,7 +158,7 @@ class CertificateValidator(CertificateMixin, Provider):
         :return: None
         """
         super(CertificateValidator, self).__init__(*args, **kwargs)
-        self.acm = ACM()
+        self.acm = ACM(self.request.region)
         self.route53 = Route53()
 
     def change_resource_record_sets(
@@ -221,11 +227,12 @@ class CertificateValidator(CertificateMixin, Provider):
         :rtype: None
         :return: None
         """
+        properties = self.request.resource_properties
         self.response.set_physical_resource_id(str(uuid.uuid4()))
         self.change_resource_record_sets(
-            self.request.resource_properties['CertificateArn'], Action.UPSERT
+            properties.certificate_arn, Action.UPSERT
         )
-        self.acm.wait(self.request.resource_properties['CertificateArn'])
+        self.acm.wait(properties.certificate_arn)
 
     def update(self) -> None:
         """
@@ -240,12 +247,13 @@ class CertificateValidator(CertificateMixin, Provider):
         :rtype: None
         :return: None
         """
+        properties = self.request.resource_properties
+        old_properties = self.request.old_resource_properties
         self.change_resource_record_sets(
-            self.request.old_resource_properties['CertificateArn'],
-            Action.DELETE
+            old_properties.certificate_arn, Action.DELETE
         )
         self.change_resource_record_sets(
-            self.request.resource_properties['CertificateArn'], Action.UPSERT
+            properties.certificate_arn, Action.UPSERT
         )
 
     def delete(self) -> None:
@@ -255,8 +263,9 @@ class CertificateValidator(CertificateMixin, Provider):
         :rtype: None
         :return: None
         """
+        properties = self.request.resource_properties
         self.change_resource_record_sets(
-            self.request.resource_properties['CertificateArn'], Action.DELETE
+            properties.certificate_arn, Action.DELETE
         )
 
     def get_domain_validation_options(self, certificate_arn: str) -> str:

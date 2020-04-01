@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 """Main AWS Lambda function module."""
 
-import logging
-
+from certificate_validator.logger import logger
 from certificate_validator.provider import Request, Response
 from certificate_validator.resources import Certificate, CertificateValidator
+from certificate_validator.version import version
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+DEFAULT_LOG_LEVEL = 'INFO'
 
 
 def handler(event: dict, context: object) -> dict:
@@ -19,7 +18,12 @@ def handler(event: dict, context: object) -> dict:
     :param context: runtime information of the AWS Lambda function
     :type context: LambdaContext object
     """
-    logger.debug('Request: {}'.format(event))
+    # Set log level manually before anything else
+    props = event.get('ResourceProperties', {})
+    logger.setLevel(props.get('LogLevel', DEFAULT_LOG_LEVEL))
+
+    logger.info('Starting certificate-validator v%s', version)
+    logger.debug('Request: %s', event)
 
     request = Request(**event)
 
@@ -33,11 +37,9 @@ def handler(event: dict, context: object) -> dict:
     if request.resource_type == 'Custom::Certificate':
         certificate = Certificate(request, response)
         certificate.handler()
-        logger.debug('Response: {}'.format(certificate.response.dict()))
+        logger.debug('Response: %s', certificate.response.dict())
 
     if request.resource_type == 'Custom::CertificateValidator':
         certificate_validator = CertificateValidator(request, response)
         certificate_validator.handler()
-        logger.debug(
-            'Response: {}'.format(certificate_validator.response.dict())
-        )
+        logger.debug('Response: %s', certificate_validator.response.dict())

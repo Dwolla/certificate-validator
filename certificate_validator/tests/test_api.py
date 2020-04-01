@@ -53,6 +53,17 @@ class ACMTestCase(AWSBaseTestCase):
         )
         self.assertEqual(expected, actual)
 
+    def test_request_certificate_no_san(self):
+        expected = {'CertificateArn': 'string'}
+        self.acm.client.request_certificate.return_value = {
+            'CertificateArn': 'string'
+        }
+        actual = self.acm.request_certificate('example.com', [])
+        self.acm.client.request_certificate.assert_called_with(
+            DomainName='example.com', ValidationMethod='DNS'
+        )
+        self.assertEqual(expected, actual)
+
     def test_delete_certificate(self):
         certificate_arn = \
             'arn:aws:acm:region:account-id:certificate/certificate-id'

@@ -4,7 +4,8 @@
 from unittest.mock import patch
 
 from certificate_validator.provider import (
-    Provider, Request, RequestType, Response, Status
+    Provider, Request, RequestResourceProperties, RequestType, Response,
+    Status
 )
 
 from .base import (
@@ -42,6 +43,7 @@ class RequestTestCase(RequestBaseTestCase):
         self.assertEqual(1, r.a)
         self.assertEqual(2, r.b)
         self.assertEqual(3, r.c)
+        self.assertEqual(Request.DEFAULT_REGION, r.region)
 
     def test_request_type(self):
         self.assertEqual('request_type', self.request.request_type)
@@ -75,12 +77,102 @@ class RequestTestCase(RequestBaseTestCase):
         self.assertEqual('', r.physical_resource_id)
 
     def test_resource_properties(self):
-        self.assertEqual({'ServiceToken': 'service_token'},
-                         self.request.resource_properties)
+        self.assertEqual(
+            'service_token', self.request.resource_properties.service_token
+        )
+
+    def test_resource_properties_none(self):
+        r = Request(ResourceProperties=None)
+        properties = r.resource_properties
+        self.assertIsInstance(properties, RequestResourceProperties)
+        # TODO
 
     def test_old_resource_properties(self):
-        self.assertEqual({'ServiceToken': 'service_token'},
-                         self.request.old_resource_properties)
+        self.assertEqual(
+            'service_token', self.request.old_resource_properties.service_token
+        )
+
+    def test_old_resource_properties_none(self):
+        r = Request(OldResourceProperties=None)
+        properties = r.old_resource_properties
+        self.assertIsInstance(properties, RequestResourceProperties)
+        # TODO
+
+    def test_sans(self):
+        kwargs = {
+            'ResourceProperties': {
+                'SubjectAlternativeNames': ['www.certificate-validator.com']
+            }
+        }
+        r = Request(**kwargs)
+        self.assertEqual(['www.certificate-validator.com'],
+                         r.resource_properties.sans)
+
+    def test_old_sans(self):
+        kwargs = {
+            'OldResourceProperties': {
+                'SubjectAlternativeNames': ['www.certificate-validator.com']
+            }
+        }
+        r = Request(**kwargs)
+        properties = r.resource_properties
+        old_properties = r.old_resource_properties
+        self.assertEqual([], properties.sans)
+        self.assertEqual(['www.certificate-validator.com'],
+                         old_properties.sans)
+
+    def test_sans_with_empty_only(self):
+        self.assertEqual([], self.request.resource_properties.sans)
+        for case in [None, [''], [None], ['', None], [None, '']]:
+            kwargs = {'ResourceProperties': {'SubjectAlternativeNames': case}}
+            r = Request(**kwargs)
+            properties = r.resource_properties
+            self.assertEqual([], properties.sans,
+                             "Failed test. input %s, expected %s, got %s" %
+                             (case, [], properties.sans))
+
+    def test_sans_with_mixed(self):
+        for case in [['', 'www.certificate-validator.com'],
+                     [None, 'www.certificate-validator.com'],
+                     ['www.certificate-validator.com', None],
+                     ['', 'www.certificate-validator.com', None],
+                     [None, '', 'www.certificate-validator.com']]:
+            kwargs = {'ResourceProperties': {'SubjectAlternativeNames': case}}
+            r = Request(**kwargs)
+            properties = r.resource_properties
+            sans = properties.sans
+            self.assertEqual(['www.certificate-validator.com'], sans,
+                             "Failed test. input %s, expected %s, got %s" %
+                             (case, ['www.certificate-validator.com'], sans))
+
+    def test_region_default(self):
+        self.assertEqual(Request.DEFAULT_REGION, self.request.region)
+
+    def test_region_caching(self):
+        region = self.request.region
+        self.mock_logger.warning.assert_called_with(
+            "Failed to parse stack ARN(%s) to get region - defaulting to %s",
+            'stack_id', Request.DEFAULT_REGION
+        )
+        self.mock_logger.reset_mock()
+        region2 = self.request.region
+        self.mock_logger.warning.assert_not_called()
+        self.assertIs(region, region2)
+        self.assertEqual(Request.DEFAULT_REGION, self.request.region)
+
+    def test_region_from_arn(self):
+        for region in ['us-west-1', 'us-east-1', 'us-west-2', 'ap-south-1']:
+            kwargs = {
+                "StackId":
+                    "arn:aws:cloudformation:{}:{}:stack/stackname/guid".format(
+                        region, '123456789012'
+                    )
+            }
+            r = Request(**kwargs)
+            actual = r.region
+            self.assertEqual(
+                region, actual, "Expected %s, got %s" % (region, actual)
+            )
 
 
 class ResponseTestCase(ResponseBaseTestCase):
