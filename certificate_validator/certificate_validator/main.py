@@ -4,6 +4,7 @@
 from certificate_validator.logger import logger
 from certificate_validator.provider import Request, Response
 from certificate_validator.resources import Certificate, CertificateValidator
+from certificate_validator.version import version
 
 DEFAULT_LOG_LEVEL = 'INFO'
 
@@ -21,6 +22,7 @@ def handler(event: dict, context: object) -> dict:
     props = event.get('ResourceProperties', {})
     logger.setLevel(props.get('LogLevel', DEFAULT_LOG_LEVEL))
 
+    logger.info('Starting certificate-validator v%s', version)
     logger.debug('Request: %s', event)
 
     request = Request(**event)
