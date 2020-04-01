@@ -102,7 +102,7 @@ class ACM(AWS):
         :rtype: dict
         :return: ARN of the issued certificate
         """
-        kwargs = dict(DomainName=domain_name, 
+        kwargs = dict(DomainName=domain_name,
                       ValidationMethod=ValidationMethod.DNS.value)
         if subject_alternative_names:
             kwargs['SubjectAlternativeNames'] = subject_alternative_names

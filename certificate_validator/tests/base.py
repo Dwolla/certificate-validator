@@ -4,7 +4,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from certificate_validator import api, main, provider, resources
+from certificate_validator import api, logger, main, provider, resources
 from certificate_validator.api import AWS
 from certificate_validator.provider import Provider, Request, Response
 
@@ -28,7 +28,7 @@ class AWSBaseTestCase(BaseTestCase):
 class MainBaseTestCase(BaseTestCase):
     def setUp(self):
         super(MainBaseTestCase, self).setUp()
-        self.mock_logging = patch.object(main.logging, 'getLogger').start()
+        self.mock_logging = patch.object(logger.logging, 'getLogger').start()
         self.mock_logging.return_value = Mock()
         self.mock_logger = patch.object(main, 'logger').start()
         self.event = {
@@ -83,6 +83,7 @@ class RequestBaseTestCase(BaseTestCase):
                 'ServiceToken': 'service_token'
             }
         }
+        self.mock_logger = patch.object(provider, 'logger').start()
         self.request = Request(**self.kwargs)
 
 

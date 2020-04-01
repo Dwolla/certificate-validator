@@ -5,7 +5,11 @@ from enum import Enum
 
 import requests
 
+from certificate_validator.data_mapper import (
+    ClassValue, CleanListValue, DataMapper, DataMapperValue
+)
 from certificate_validator.exceptions import UnknownRequestType
+from certificate_validator.logger import logger
 
 
 class RequestType(str, Enum):
@@ -32,7 +36,19 @@ class Status(str, Enum):
     FAILED = 'FAILED'
 
 
-class Request():
+class RequestResourceProperties(DataMapper):
+    """
+    Class holding Request Resource Properties.
+    """
+    MAP = {
+        'ServiceToken': DataMapperValue('service_token'),
+        'DomainName': DataMapperValue('domain_name'),
+        'SubjectAlternativeNames': CleanListValue('sans'),
+        'CertificateArn': DataMapperValue('certificate_arn'),
+    }
+
+
+class Request(DataMapper):
     """
     A request from a AWS Custom Resource.
 
@@ -57,134 +73,52 @@ class Request():
       }
     }
     """
-    def __init__(self, *args: list, **kwargs: dict) -> None:
-        """
-        Create a new `Request` object.
+    DEFAULT_REGION = 'us-east-1'
 
-        :rtype: None
-        :return: None
+    MAP = {
+        'RequestType': DataMapperValue('request_type'),
+        'ResponseURL': DataMapperValue('response_url'),
+        'ServiceToken': DataMapperValue('service_token'),
+        'StackId': DataMapperValue('stack_id'),
+        'RequestId': DataMapperValue('request_id'),
+        'ResourceType': DataMapperValue('resource_type'),
+        'LogicalResourceId': DataMapperValue('logical_resource_id'),
+        'PhysicalResourceId': DataMapperValue('physical_resource_id'),
+        'ResourceProperties':
+            ClassValue('resource_properties', clazz=RequestResourceProperties),
+        'OldResourceProperties':
+            ClassValue(
+                'old_resource_properties', clazz=RequestResourceProperties
+            )
+    }
+
+    def __init__(self, **kwargs):
         """
-        self.__dict__.update(**kwargs)
+        Initialize Request.
+        """
+        super().__init__(**kwargs)
+        self._region = None
 
     @property
-    def request_type(self) -> str:
+    def region(self) -> str:
         """
-        Return the RequestType of the Custom Resource Request Object.
+        Get region of the certificate.
 
-        The RequestType is set by the AWS CloudFormation stack operation
-        (create-stack, update-stack, or delete-stack) that was initiated by the
-        template developer for the stack that contains the custom resource.
-
-        Must be one of: Create, Update, or Delete.
+        If not explicitly set, auto-determine on first call from stack_id arn.
         """
-        return self.RequestType
-
-    @property
-    def service_token(self) -> str:
-        """
-        Return the ServiceToken of the Custom Resource Request Object.
-
-        The ServiceToken (an Amazon SNS topic or AWS Lambda function Amazon
-        Resource Name) that is obtained from the custom resource provider to
-        access the service. The service token must be in the same region in
-        which you are creating the stack.
-        """
-        return self.ServiceToken
-
-    @property
-    def response_url(self) -> str:
-        """
-        Return the ResponseURL of the Custom Resource Request Object.
-
-        The ResponseURL identifies a presigned S3 bucket that receives
-        responses from the custom resource provider to AWS CloudFormation.
-        """
-        return self.ResponseURL
-
-    @property
-    def stack_id(self) -> str:
-        """
-        Return the StackId of the Custom Resource Request Object.
-
-        The Amazon Resource Name (ARN) that identifies the stack that contains
-        the custom resource.
-
-        Combining the StackId with the RequestId forms a value that you can use
-        to uniquely identify a request on a particular custom resource.
-        """
-        return self.StackId
-
-    @property
-    def request_id(self) -> str:
-        """
-        Return the RequestId of the Custom Resource Request Object.
-
-        A unique ID for the request.
-
-        Combining the StackId with the RequestId forms a value that you can use
-        to uniquely identify a request on a particular custom resource.
-        """
-        return self.RequestId
-
-    @property
-    def resource_type(self) -> str:
-        """
-        Return the ResourceType of the Custom Resource Request Object.
-
-        The template developer-chosen resource type of the custom resource in
-        the AWS CloudFormation template. Custom resource type names can be up
-        to 60 characters long and can include alphanumeric and the following
-        characters: _@-.
-        """
-        return self.ResourceType
-
-    @property
-    def logical_resource_id(self) -> str:
-        """
-        Return the LogicalResourceId of the Custom Resource Request Object.
-
-        The template developer-chosen name (logical ID) of the custom resource
-        in the AWS CloudFormation template. This is provided to facilitate
-        communication between the custom resource provider and the template
-        developer.
-        """
-        return self.LogicalResourceId
-
-    @property
-    def physical_resource_id(self) -> str:
-        """
-        Return the PhysicalResourceId of the Custom Resource Request Object.
-
-        A required custom resource provider-defined physical ID that is unique
-        for that provider.
-
-        Always sent with Update and Delete requests; never sent with Create.
-        """
-        if hasattr(self, 'PhysicalResourceId'):
-            return self.PhysicalResourceId
-        else:
-            return ''
-
-    @property
-    def resource_properties(self) -> dict:
-        """
-        Return the ResourceProperties of the Custom Resource Request Object.
-
-        This field contains the contents of the Properties object sent by the
-        template developer. Its contents are defined by the custom resource
-        provider.
-        """
-        return self.ResourceProperties
-
-    @property
-    def old_resource_properties(self) -> dict:
-        """
-        Return the OldResourceProperties of the Custom Resource Request Object.
-
-        Used only for Update requests. Contains the resource properties that
-        were declared previous to the update request.
-        """
-        return self.OldResourceProperties
+        if not self._region:
+            arn = self.stack_id.split(':', 5)
+            if len(arn) > 3:
+                region = arn[3]
+                logger.info("Auto-determined region to be %s", region)
+            else:
+                region = self.DEFAULT_REGION
+                logger.warning(
+                    "Failed to parse stack ARN(%s) to get " +
+                    "region - defaulting to %s", self.stack_id, region
+                )
+            self._region = region
+        return self._region
 
 
 class Response():
