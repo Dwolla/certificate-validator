@@ -3,4 +3,4 @@
 
 author = """Nickolas Kraus"""
 email = 'NickHKraus@gmail.com'
-version = '0.4.2a'
+version = '0.4.1'

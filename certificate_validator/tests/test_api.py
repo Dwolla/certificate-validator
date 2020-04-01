@@ -60,8 +60,7 @@ class ACMTestCase(AWSBaseTestCase):
         }
         actual = self.acm.request_certificate('example.com', [])
         self.acm.client.request_certificate.assert_called_with(
-            DomainName='example.com',
-            ValidationMethod='DNS'
+            DomainName='example.com', ValidationMethod='DNS'
         )
         self.assertEqual(expected, actual)
 
